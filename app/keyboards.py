@@ -54,6 +54,14 @@ cancelKb = InlineKeyboardMarkup(
     inline_keyboard=[[InlineKeyboardButton(text=labels.CANCEL_EDITING, callback_data="close_kb")]]
 )
 
+adminManageKb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text=labels.ADD_ADMIN, callback_data="add_admin")],
+        [InlineKeyboardButton(text=labels.ADMIN_LIST, callback_data="list_admins")],
+        [InlineKeyboardButton(text=labels.CLOSE, callback_data="close_kb")],
+    ]
+)
+
 
 async def get_task_kb(task_id: int, msg_id: int):
     return InlineKeyboardMarkup(

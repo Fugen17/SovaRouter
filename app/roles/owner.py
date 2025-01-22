@@ -44,7 +44,7 @@ async def add_task(message: Message, state: FSMContext):
     reply_markup = await kb.get_list_by_role(Role.WORKER, 1, "task_")
     if not reply_markup:
         logger.debug("Список пуст")
-        await message.answer(labels.NO_WORKERS, show_alert=True)
+        await message.answer(messages.NO_WORKERS, show_alert=True)
         return
     await state.set_state(AddTask.user_id)
     await message.reply(text=messages.CHOOSE_WORKER, reply_markup=reply_markup)
@@ -60,12 +60,10 @@ async def get_user_task(callback: CallbackQuery, state: FSMContext):
 
     if not reply_markup:
         logger.debug("Список пуст")
-        await callback.answer(labels.NO_FACTORIES, show_alert=True)
+        await callback.answer(messages.NO_OBJECTS, show_alert=True)
         await state.clear()
         return
-    await callback.message.edit_text(
-        text=messages.CHOOSE_FACTORY_FOR_MASTER, reply_markup=reply_markup
-    )
+    await callback.message.edit_text(text=messages.CHOOSE_OBJECT, reply_markup=reply_markup)
 
 
 @owner.callback_query(F.data.startswith("task_factory_"), AddTask.object_id)
@@ -75,7 +73,7 @@ async def get_object_task(callback: CallbackQuery, state: FSMContext):
     await state.update_data(object_id=int(id))
     await state.set_state(AddTask.description)
     await callback.message.edit_text(
-        text=messages.ENTER_ACTIVITY_DURATION, reply_markup=kb.cancelKb
+        text=messages.INPUT_TASK_DESCRIPTION, reply_markup=kb.cancelKb
     )
 
 
@@ -85,14 +83,14 @@ async def get_description_task(message: Message, state: FSMContext):
     await state.update_data(description=message.text[: WorkerTaskLen.description])
     data = await state.get_data()
     await state.clear()
-    await message.answer(text=messages.CONFIRM_CHANGE_JOB, reply_markup=None)
+    await message.answer(text=messages.TASK_CREATED, reply_markup=None)
     user = await requests.get_user(data.get("user_id"), False)
     admin = await requests.get_user(message.from_user.id)
     object = await requests.get_factory(data.get("object_id"))
     task = await requests.add_task(admin.id, user.id, object.id, data.get("description"))
     msg = await message.bot.send_message(
         chat_id=user.tg_id,
-        text=messages.WORKER_NUMBER,
+        text=messages.ASSIGN_TASK.format(object.name, task.description),
     )
     await message.bot.send_location(
         chat_id=user.tg_id,
@@ -123,8 +121,8 @@ async def add_admin_id(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await state.set_state(PickAdmin.id)
     await callback.answer()
-    await callback.message.edit_text(text=messages.ADMIN_ADD_TEXT, reply_markup=None)
-    await callback.message.answer(text=messages.ENTER_ADMIN_ID)
+    await callback.message.edit_text(text=messages.WORKER_ADD, reply_markup=None)
+    await callback.message.answer(text=messages.ENTER_WORKER_ID)
 
 
 @owner.message(PickAdmin.id)
@@ -132,7 +130,7 @@ async def add_admin_name(message: Message, state: FSMContext):
     logger.info(f"add_admin_name (from_user={message.from_user.id})")
     await state.update_data(id=message.text)
     await state.set_state(PickAdmin.name)
-    await message.answer(text=messages.ENTER_ADMIN_NAME)
+    await message.answer(text=messages.ENTER_WORKER_NAME)
 
 
 @owner.message(PickAdmin.name)
@@ -179,9 +177,13 @@ async def add_admin_confirm(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer(text=messages.CONFIRM_ADD, reply_markup=kb.ownerEditingKb)
 
         await callback.message.bot.send_message(
-            chat_id=data.get("id"),
-            text=messages.GIVE_ADMIN_ROLE.format(data.get("name")),
-            reply_markup=kb.workerKb,
+            chat_id=data.get("id"), text=messages.GIVE_WORKER_ROLE.format(data.get("name"))
+        )
+        msg = await callback.message.bot.send_message(
+            chat_id=data.get("id"), text=messages.WORKER_INSTRUCTION
+        )
+        await callback.message.bot.pin_chat_message(
+            chat_id=data.get("id"), message_id=msg.message_id
         )
     except BadKeyError:
         logger.debug("Юзер не нажимал /start")
@@ -203,7 +205,7 @@ async def admin_list(callback: CallbackQuery, state: FSMContext):
         await callback.answer(labels.EMPTY_LIST, show_alert=True)
         return
     await callback.answer()
-    await callback.message.edit_text(text=labels.ADMIN_LIST, reply_markup=reply_markup)
+    await callback.message.edit_text(text=labels.WORKER_LIST, reply_markup=reply_markup)
 
 
 @owner.callback_query(F.data.startswith(f"page_{Role.WORKER}_"))
@@ -220,7 +222,7 @@ async def show_admin_list_page(callback: CallbackQuery, state: FSMContext):
     if key == "task_":
         await callback.message.edit_text(text=messages.CHOOSE_WORKER, reply_markup=reply_markup)
     else:
-        await callback.message.edit_text(text=labels.ADMIN_LIST, reply_markup=reply_markup)
+        await callback.message.edit_text(text=labels.WORKER_LIST, reply_markup=reply_markup)
 
 
 @owner.callback_query(F.data.startswith(f"{Role.WORKER}_"))
@@ -233,7 +235,7 @@ async def admin_info(callback: CallbackQuery, state: FSMContext):
     user = await requests.get_user(id, use_tg=False)
     user_tg_info = await callback.bot.get_chat(user.tg_id)
     await callback.message.edit_text(
-        text=messages.ADMIN_INFO.format(user.fullname, user_tg_info.username),
+        text=messages.WORKER_INFO.format(user.fullname, user_tg_info.username),
         reply_markup=await kb.manage_people(Role.WORKER, user_tg_id=user.tg_id, back_page=page),
     )
 
@@ -247,7 +249,7 @@ async def dismiss_admin(callback: CallbackQuery, state: FSMContext):
     user = await requests.get_user(user_tg_id)
     user_tg_info = await callback.bot.get_chat(user_tg_id)
     await callback.message.edit_text(
-        text=messages.DELETE_ADMIN.format(user.fullname, user_tg_info.username),
+        text=messages.DELETE_WORKER.format(user.fullname, user_tg_info.username),
         reply_markup=await kb.person_delete(Role.WORKER, user_tg_id),
     )
 
@@ -260,10 +262,11 @@ async def confirm_dismiss_admin(callback: CallbackQuery, state: FSMContext):
 
     await requests.update_user(user_tg_id, {User.role: Role.USER})
     try:
-        await callback.message.edit_text(text=messages.ADMIN_DELETED, reply_markup=None)
+        await callback.message.edit_text(text=messages.WORKER_DELETED, reply_markup=None)
         await callback.bot.send_message(
             chat_id=user_tg_id, text=messages.YOU_DISMISSED, reply_markup=ReplyKeyboardRemove()
         )
+        await callback.bot.unpin_all_chat_messages(user_tg_id)
     except Exception as ex:
         logger.error(f"confirm_dismiss\n{ex}")
 
@@ -296,8 +299,8 @@ async def add_factory_company(callback: CallbackQuery, state: FSMContext):
     logger.info(f"add_factory_company (from_user={callback.from_user.id})")
     await callback.answer()
     await state.set_state(PickObject.name)
-    await callback.message.edit_text(text=messages.FACTORY_ADD_TEXT, reply_markup=None)
-    await callback.message.answer(text=messages.ENTER_COMPANY_NAME)
+    await callback.message.edit_text(text=messages.OBJECT_ADD, reply_markup=None)
+    await callback.message.answer(text=messages.ENTER_OBJECT_NAME)
 
 
 @owner.message(PickObject.name)
@@ -306,7 +309,7 @@ async def add_factory_name(message: Message, state: FSMContext):
     name = message.text[: ObjectLen.name]
     await state.update_data(name=name)
     await state.set_state(PickObject.description)
-    await message.answer(text=messages.ENTER_FACTORY_NAME)
+    await message.answer(text=messages.ENTER_OBJECT_DESCRIPTION)
 
 
 @owner.message(PickObject.description)
@@ -315,7 +318,7 @@ async def add_factory_description(message: Message, state: FSMContext):
     description = message.text[: ObjectLen.description]
     await state.update_data(description=description)
     await state.set_state(PickObject.location)
-    await message.answer(text=messages.ENTER_FACTORY_LOCATION)
+    await message.answer(text=messages.ENTER_OBJECT_LOCATION)
 
 
 @owner.message(PickObject.location)
@@ -328,7 +331,7 @@ async def add_factory_confirm(message: Message, state: FSMContext):
 
     data = await state.get_data()
     await message.answer(
-        text=messages.FACTORY_ADD_CONFIRM.format(
+        text=messages.OBJECT_ADD_CONFIRM.format(
             data.get("name"), data.get("description"), data.get("location")
         ),
         reply_markup=kb.confirm_factory_add,
@@ -355,7 +358,7 @@ async def add_factory(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer(text=messages.CONFIRM_ADD, reply_markup=None)
     except AlreadyExistsError:
         logger.debug("Предприятие уже существует")
-        await callback.message.answer(text=messages.ALREADY_EXISTS_FACTORY, reply_markup=None)
+        await callback.message.answer(text=messages.ALREADY_EXISTS_OBJECT, reply_markup=None)
     finally:
         await callback.message.edit_reply_markup(reply_markup=None)
         await state.clear()
@@ -376,7 +379,7 @@ async def factory_list(callback: CallbackQuery, state: FSMContext):
         await callback.answer(labels.EMPTY_LIST, show_alert=True)
         return
     await callback.answer()
-    await callback.message.edit_text(text=labels.FACTORY_LIST, reply_markup=reply_markup)
+    await callback.message.edit_text(text=labels.OBJECT_LIST, reply_markup=reply_markup)
 
 
 @owner.callback_query(F.data.startswith("page_factory_"))
@@ -391,11 +394,9 @@ async def show_factory_list_page(callback: CallbackQuery, state: FSMContext):
         return
     await callback.answer()
     if key == "task_":
-        await callback.message.edit_text(
-            text=messages.CHOOSE_FACTORY_FOR_MASTER, reply_markup=reply_markup
-        )
+        await callback.message.edit_text(text=messages.CHOOSE_OBJECT, reply_markup=reply_markup)
     else:
-        await callback.message.edit_text(text=labels.FACTORY_LIST, reply_markup=reply_markup)
+        await callback.message.edit_text(text=labels.OBJECT_LIST, reply_markup=reply_markup)
 
 
 @owner.callback_query(F.data.startswith("factory_"))
@@ -408,7 +409,7 @@ async def factory_info(callback: CallbackQuery, state: FSMContext):
         chat_id=callback.from_user.id, latitude=factory.latitude, longitude=factory.longitude
     )
     await callback.message.edit_text(
-        text=messages.FACTORY_INFO.format(factory.name, factory.description),
+        text=messages.OBJECT_INFO.format(factory.name, factory.description),
         reply_markup=await kb.manage_object(fact_id, msg_location_id.message_id),
     )
 
@@ -421,7 +422,7 @@ async def delete_factory(callback: CallbackQuery, state: FSMContext):
     msg_id = int(callback.data.split("_")[3])
     factory = await requests.get_factory(fact_id)
     await callback.message.edit_text(
-        text=messages.CONFIRM_DELETE_FACT.format(factory.name),
+        text=messages.CONFIRM_DELETE_FACT.format(factory.name, factory.description),
         reply_markup=await kb.confirm_delete_fact(fact_id, msg_id),
     )
 
@@ -435,4 +436,4 @@ async def confirm_delete_fact(callback: CallbackQuery, state: FSMContext):
     await callback.bot.delete_message(chat_id=callback.from_user.id, message_id=msg_id)
     await requests.delete_factory(fact_id)
     await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.message.answer(text=messages.FACTORY_DELETED)
+    await callback.message.answer(text=messages.OBJECT_DELETED)

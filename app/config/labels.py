@@ -26,4 +26,7 @@ ADD_OBJECT = "Добавить объект"
 OBJECT_LIST = "Список объектов"
 DELETE = "Удалить"
 
+EMPTY_LIST = "Список пуст!"
+WORKER_LIST = "Список рабочих"
 
+OBJECT_LIST = "Список объектов"

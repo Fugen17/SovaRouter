@@ -43,10 +43,11 @@ async def task(callback: CallbackQuery, state: FSMContext):
     msg_id = int(callback.data.split("_")[-1])
     if callback.data.split("_")[1] == "complete":
         task = await requests.update_task(task_id, TaskStatus.COMPLETE)
-        user = await requests.get_user(task.admin_id, False)
+        admin = await requests.get_user(task.admin_id, False)
         object = await requests.get_factory(task.object_id)
+        user = await requests.get_user(callback.from_user.id)
         await callback.bot.send_message(
-            chat_id=user.tg_id,
+            chat_id=admin.tg_id,
             text=messages.SEND_COMPLETE_TASK.format(object.name, user.fullname, task.description),
         )
         await callback.bot.delete_message(

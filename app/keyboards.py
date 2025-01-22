@@ -56,8 +56,8 @@ cancelKb = InlineKeyboardMarkup(
 
 adminManageKb = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text=labels.ADD_ADMIN, callback_data="add_admin")],
-        [InlineKeyboardButton(text=labels.ADMIN_LIST, callback_data="list_admins")],
+        [InlineKeyboardButton(text=labels.ADD_WORKER, callback_data="add_admin")],
+        [InlineKeyboardButton(text=labels.WORKER_LIST, callback_data="list_admins")],
         [InlineKeyboardButton(text=labels.CLOSE, callback_data="close_kb")],
     ]
 )

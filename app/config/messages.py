@@ -40,14 +40,14 @@ EDIT_COMPLETE_TASK = """
 """
 
 TASK_REASON = "Напишите причину отмены задания:"
-SEND_DENIED_TASK = """
+EDIT_DENIED_TASK = """
 Объект <b>{}</b> был отменён по причине:
 <i>{}</i>
 
 Описание задачи:
 {}
 """
-EDIT_DENIED_TASK = """
+SEND_DENIED_TASK = """
 Задача <b>{}</b> была отменёна <i>{}</i> по причине:
 {}
 

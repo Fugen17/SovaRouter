@@ -30,3 +30,4 @@ EMPTY_LIST = "Список пуст!"
 WORKER_LIST = "Список рабочих"
 
 OBJECT_LIST = "Список объектов"
+ADD_WORKER = "Добавить рабочего"

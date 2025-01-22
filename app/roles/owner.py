@@ -90,7 +90,7 @@ async def get_description_task(message: Message, state: FSMContext):
     admin = await requests.get_user(message.from_user.id)
     object = await requests.get_factory(data.get("object_id"))
     task = await requests.add_task(admin.id, user.id, object.id, data.get("description"))
-    msg_id = await message.bot.send_message(
+    msg = await message.bot.send_message(
         chat_id=user.tg_id,
         text=messages.WORKER_NUMBER,
     )
@@ -98,7 +98,7 @@ async def get_description_task(message: Message, state: FSMContext):
         chat_id=user.tg_id,
         latitude=object.latitude,
         longitude=object.longitude,
-        reply_markup=await kb.get_task_kb(task.id, msg_id.message_id),
+        reply_markup=await kb.get_task_kb(task.id, msg.message_id),
     )
 
 
@@ -281,16 +281,14 @@ async def denied_dismiss(callback: CallbackQuery, state: FSMContext):
 
 @owner.message(F.text == labels.OBJECTS_MANAGE)
 @owner.callback_query(F.data == "return_factories")
-async def factories_manage(event: TelegramObject, state: FSMContext):
-    logger.info(f"factories_manage (from_user={event.from_user.id})")
+async def objects_manage(event: TelegramObject, state: FSMContext):
+    logger.info(f"objects_manage (from_user={event.from_user.id})")
     await state.clear()
     if isinstance(event, CallbackQuery):
         await event.answer()
-        await event.message.edit_text(
-            text=messages.CHOOSE_OPTION, reply_markup=kb.factories_manage
-        )
+        await event.message.edit_text(text=messages.CHOOSE_OPTION, reply_markup=kb.objects_manage)
     else:
-        await event.reply(text=messages.CHOOSE_OPTION, reply_markup=kb.factories_manage)
+        await event.reply(text=messages.CHOOSE_OPTION, reply_markup=kb.objects_manage)
 
 
 @owner.callback_query(F.data == "add_factory")
@@ -411,7 +409,7 @@ async def factory_info(callback: CallbackQuery, state: FSMContext):
     )
     await callback.message.edit_text(
         text=messages.FACTORY_INFO.format(factory.name, factory.description),
-        reply_markup=await kb.manage_factory(fact_id, msg_location_id.message_id),
+        reply_markup=await kb.manage_object(fact_id, msg_location_id.message_id),
     )
 
 

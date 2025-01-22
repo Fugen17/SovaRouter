@@ -36,30 +36,13 @@ ownerKb = ReplyKeyboardMarkup(
     resize_keyboard=True,
 )
 
-workerKb = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text=labels.GET_TASKS)],
-        [KeyboardButton(text=labels.INSTRUCTION_BUTTON)],
-    ],
-    resize_keyboard=True,
-)
-
-
-adminManageKb = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text=labels.ADD_ADMIN, callback_data="add_admin")],
-        [InlineKeyboardButton(text=labels.ADMIN_LIST, callback_data="list_admins")],
-        [InlineKeyboardButton(text=labels.CLOSE, callback_data="close_kb")],
-    ]
-)
-
 confirmAdminAdd = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(text=labels.YES, callback_data="add_admin_confirm"),
             InlineKeyboardButton(text=labels.NO, callback_data="add_admin_denied"),
         ],
-        [InlineKeyboardButton(text=labels.CLOSE, callback_data="close_kb")],
+        [InlineKeyboardButton(text=labels.CANCEL_EDITING, callback_data="close_kb")],
     ]
 )
 
@@ -79,10 +62,10 @@ async def get_task_kb(task_id: int, msg_id: int):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=labels.WRITE_SHIFT, callback_data=f"mytask_complete_{task_id}_{msg_id}"
+                    text=labels.TASK_COMPLETED, callback_data=f"mytask_complete_{task_id}_{msg_id}"
                 ),
                 InlineKeyboardButton(
-                    text=labels.DENIE_SHIFT, callback_data=f"mytask_denie_{task_id}_{msg_id}"
+                    text=labels.TASK_CANCELED, callback_data=f"mytask_denie_{task_id}_{msg_id}"
                 ),
             ]
         ]
@@ -189,10 +172,10 @@ async def person_delete(role: Role, user_tg_id: int):
     return keyboard.as_markup()
 
 
-factories_manage = InlineKeyboardMarkup(
+objects_manage = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text=labels.ADD_FACTORY, callback_data="add_factory")],
-        [InlineKeyboardButton(text=labels.FACTORY_LIST, callback_data="factory_list")],
+        [InlineKeyboardButton(text=labels.ADD_OBJECT, callback_data="add_factory")],
+        [InlineKeyboardButton(text=labels.OBJECT_LIST, callback_data="factory_list")],
         [InlineKeyboardButton(text=labels.CLOSE, callback_data="close_kb")],
     ]
 )
@@ -247,7 +230,7 @@ async def get_factory_page(cur_page: int, key: str = ""):
     return keyboard.as_markup()
 
 
-async def manage_factory(fact_id: int, msg_location_id: int):
+async def manage_object(fact_id: int, msg_location_id: int):
     keyboard = InlineKeyboardBuilder()
 
     keyboard.row(

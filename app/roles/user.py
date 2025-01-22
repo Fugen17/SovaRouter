@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, Message
 from app.config import labels, messages
 from app.config.roles import Role
 from app.db.requests import set_user
-from app.keyboards import ownerKb, workerKb
+from app.keyboards import ownerKb
 from app.utils import setup_logger
 from app.utils.isonwer import is_owner
 
@@ -32,7 +32,9 @@ async def cmd_start(message: Message, state: FSMContext):
 
     match user.role:
         case Role.WORKER:
-            await message.answer(text=messages.MASTER_INSTRUCTION, reply_markup=workerKb)
+            msg = await message.answer(text=messages.MASTER_INSTRUCTION)
+            await message.bot.unpin_all_chat_messages(message.from_user.id)
+            await message.bot.pin_chat_message(message.from_user.id, msg.message_id)
         case Role.OWNER:
             await message.answer(text=messages.OWNER_INSTRUCTION, reply_markup=ownerKb)
 

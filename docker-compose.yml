@@ -1,19 +1,4 @@
 services:
-  dozzle:
-    image: amir20/dozzle:latest
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ~/config:/data
-    ports:
-      - 8080:8080 # Don't forget to add rule to firewall
-    restart: unless-stopped
-    environment:
-      DOZZLE_AUTH_PROVIDER: simple
-      DOZZLE_FILTER: label=group=sovarouter
-    labels:
-      - group=sovarouter
-      - dev.dozzle.name=dozzle
-
   db:
     image: postgres:17.0
     restart: always

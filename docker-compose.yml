@@ -8,8 +8,6 @@ services:
       - pgdata_sovarouter:/var/lib/postgresql/data
     ports:
       - 5441:5432 # Don't forget to add rule to firewall
-    depends_on:
-      - dozzle
     labels:
       - group=sovarouter
       - dev.dozzle.name=database

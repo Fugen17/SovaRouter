@@ -5,11 +5,11 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove, TelegramO
 
 from app import keyboards as kb
 from app.config import labels, messages
-from app.config.db import ObjectLen, UserLen
+from app.config.db import ObjectLen, UserLen, WorkerTaskLen
 from app.config.roles import Role
 from app.db import requests
 from app.db.exceptions import AlreadyExistsError, BadKeyError
-from app.db.models import User
+from app.db.models import User, WorkerTask
 from app.db.requests import update_user
 from app.filters import RoleFilter
 from app.states import AddTask, PickAdmin, PickObject
@@ -82,20 +82,23 @@ async def get_object_task(callback: CallbackQuery, state: FSMContext):
 @owner.message(AddTask.description)
 async def get_description_task(message: Message, state: FSMContext):
     logger.info(f"get_description_task (from_user={message.from_user.id})")
-    await state.update_data(description=message.text)
+    await state.update_data(description=message.text[: WorkerTaskLen.description])
     data = await state.get_data()
     await state.clear()
     await message.answer(text=messages.CONFIRM_CHANGE_JOB, reply_markup=None)
     user = await requests.get_user(data.get("user_id"), False)
+    admin = await requests.get_user(message.from_user.id)
     object = await requests.get_factory(data.get("object_id"))
-    task = await requests.add_task(
-        message.from_user.id, user.id, object.id, data.get("description")
-    )
-    await message.bot.send_message(
-        chat_id=user.tg_id, text=messages.WORKER_NUMBER, reply_markup=kb.get_task_kb(task.id)
+    task = await requests.add_task(admin.id, user.id, object.id, data.get("description"))
+    msg_id = await message.bot.send_message(
+        chat_id=user.tg_id,
+        text=messages.WORKER_NUMBER,
     )
     await message.bot.send_location(
-        chat_id=user.tg_id, latitude=object.latitude, longitude=object.longitude
+        chat_id=user.tg_id,
+        latitude=object.latitude,
+        longitude=object.longitude,
+        reply_markup=await kb.get_task_kb(task.id, msg_id.message_id),
     )
 
 

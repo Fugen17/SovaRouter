@@ -20,6 +20,7 @@ class TaskReport(StatesGroup):
     """
 
     id = State()
+    msg_id = State()
 
 
 class PickObject(StatesGroup):

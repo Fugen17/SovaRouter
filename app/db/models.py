@@ -63,6 +63,7 @@ class WorkerTask(Base):
     admin_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     object_id: Mapped[int] = mapped_column(ForeignKey("object.id"))
+    description: Mapped[str] = mapped_column(String(WorkerTaskLen.description), nullable=False)
     created: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
     status: Mapped[int] = mapped_column(SmallInteger, default=TaskStatus.WAIT, nullable=False)
     note: Mapped[str] = mapped_column(String(WorkerTaskLen.note), nullable=True)

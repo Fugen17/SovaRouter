@@ -19,7 +19,7 @@ async def main():
     await db_init()
 
     dp = Dispatcher()
-    dp.include_routers(user, owner, worker)
+    dp.include_routers(user, worker, owner)
     dp.callback_query.middleware(LoggingMiddleware())
     dp.message.middleware(LoggingMiddleware())
 

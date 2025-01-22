@@ -15,3 +15,4 @@ class ObjectLen:
 
 class WorkerTaskLen:
     note = 100
+    description = 100

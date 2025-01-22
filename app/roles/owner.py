@@ -52,6 +52,7 @@ async def add_task(message: Message, state: FSMContext):
 
 @owner.callback_query(F.data.startswith(f"task_{Role.WORKER}_"), AddTask.user_id)
 async def get_user_task(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"get_user_task (from_user={callback.from_user.id})")
     id = int(callback.data.split("_")[2])
     await state.update_data(user_id=int(id))
     await state.set_state(AddTask.object_id)
@@ -69,6 +70,7 @@ async def get_user_task(callback: CallbackQuery, state: FSMContext):
 
 @owner.callback_query(F.data.startswith("task_factory_"), AddTask.object_id)
 async def get_object_task(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"get_object_task (from_user={callback.from_user.id})")
     id = int(callback.data.split("_")[2])
     await state.update_data(object_id=int(id))
     await state.set_state(AddTask.description)
@@ -79,13 +81,19 @@ async def get_object_task(callback: CallbackQuery, state: FSMContext):
 
 @owner.message(AddTask.description)
 async def get_description_task(message: Message, state: FSMContext):
+    logger.info(f"get_description_task (from_user={message.from_user.id})")
     await state.update_data(description=message.text)
     data = await state.get_data()
     await state.clear()
     await message.answer(text=messages.CONFIRM_CHANGE_JOB, reply_markup=None)
     user = await requests.get_user(data.get("user_id"), False)
     object = await requests.get_factory(data.get("object_id"))
-    await message.bot.send_message(chat_id=user.tg_id, text=messages.WORKER_NUMBER)
+    task = await requests.add_task(
+        message.from_user.id, user.id, object.id, data.get("description")
+    )
+    await message.bot.send_message(
+        chat_id=user.tg_id, text=messages.WORKER_NUMBER, reply_markup=kb.get_task_kb(task.id)
+    )
     await message.bot.send_location(
         chat_id=user.tg_id, latitude=object.latitude, longitude=object.longitude
     )

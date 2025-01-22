@@ -60,6 +60,7 @@ class WorkerTask(Base):
     __tablename__ = "worker_object"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    admin_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     object_id: Mapped[int] = mapped_column(ForeignKey("object.id"))
     created: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)

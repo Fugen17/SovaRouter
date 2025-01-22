@@ -172,10 +172,12 @@ async def get_factories(deleted: bool = False) -> Sequence[Object]:
         return factories.all()
 
 
-async def add_task(user_id: int, object_id: int, description: str):
+async def add_task(admin_id: int, user_id: int, object_id: int, description: str) -> WorkerTask:
     logger.debug("add_task to db")
     async with async_session() as session:
-        task = WorkerTask(user_id=user_id, object_id=object_id, description=description)
+        task = WorkerTask(
+            admin_id=admin_id, user_id=user_id, object_id=object_id, description=description
+        )
         session.add(task)
         try:
             await session.commit()
@@ -184,8 +186,8 @@ async def add_task(user_id: int, object_id: int, description: str):
         return task
 
 
-async def update_task(task_id: int, status: TaskStatus, note: str = ""):
-    logger.debug("add_task to db")
+async def update_task(task_id: int, status: TaskStatus, note: str = "") -> WorkerTask:
+    logger.debug("update_task to db")
     async with async_session() as session:
         task: WorkerTask = await session.scalar(select(WorkerTask).where(WorkerTask.id == task_id))
 
@@ -195,3 +197,14 @@ async def update_task(task_id: int, status: TaskStatus, note: str = ""):
         task.note = note
         task.completed = datetime.now()
         await session.commit()
+        return task
+
+
+async def get_task(task_id: int) -> WorkerTask:
+    logger.debug("get_task to db")
+    async with async_session() as session:
+        task: WorkerTask = await session.scalar(select(WorkerTask).where(WorkerTask.id == task_id))
+
+        if not task:
+            raise BadKeyError()
+        return task

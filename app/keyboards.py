@@ -74,6 +74,31 @@ cancelKb = InlineKeyboardMarkup(
 )
 
 
+async def get_task_kb(task_id: int):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=labels.WRITE_SHIFT, callback_data=f"task_complete_{task_id}"
+                ),
+                InlineKeyboardButton(
+                    text=labels.DENIE_SHIFT, callback_data=f"task_denie_{task_id}"
+                ),
+            ]
+        ]
+    )
+
+
+async def task_back_kb(task_id: int):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=labels.RETURN, callback_data=f"task_{task_id}"),
+            ]
+        ]
+    )
+
+
 async def get_list_by_role(role: Role, cur_page: int, key: str = "", end: str = ""):
     """Универсальная клавиатура.
 

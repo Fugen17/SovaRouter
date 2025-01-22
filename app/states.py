@@ -12,7 +12,7 @@ class PickAdmin(StatesGroup):
     name = State()
 
 
-class PickMaster(StatesGroup):
+class TaskReport(StatesGroup):
     """States для выбора админа.
 
     Args:
@@ -20,7 +20,6 @@ class PickMaster(StatesGroup):
     """
 
     id = State()
-    name = State()
 
 
 class PickObject(StatesGroup):

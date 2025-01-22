@@ -7,7 +7,7 @@ from aiogram.client.default import DefaultBotProperties
 
 from app.db.models import db_init
 from app.middlewares.logging import LoggingMiddleware
-from app.roles import admin, owner, user, worker
+from app.roles import owner, user, worker
 from app.utils import setup_logger
 
 logger = setup_logger(__name__)
@@ -19,7 +19,7 @@ async def main():
     await db_init()
 
     dp = Dispatcher()
-    dp.include_routers(user, owner)
+    dp.include_routers(user, owner, worker)
     dp.callback_query.middleware(LoggingMiddleware())
     dp.message.middleware(LoggingMiddleware())
 

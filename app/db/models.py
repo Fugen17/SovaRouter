@@ -9,6 +9,7 @@ from sqlalchemy import (
     Integer,
     SmallInteger,
     String,
+    UniqueConstraint,
 )
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -47,10 +48,11 @@ class Object(Base):
 
     id: Mapped[int] = mapped_column(SmallInteger, primary_key=True, autoincrement=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    name: Mapped[str] = mapped_column(String(ObjectLen.name), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(ObjectLen.name), nullable=False)
     description: Mapped[str] = mapped_column(String(ObjectLen.description), nullable=False)
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
+    __table_args__ = (UniqueConstraint("name", "description", name="uq_name_description"),)
 
 
 class WorkerTask(Base):

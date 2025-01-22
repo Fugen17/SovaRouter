@@ -12,7 +12,7 @@ from app.db.exceptions import AlreadyExistsError, BadKeyError
 from app.db.models import User
 from app.db.requests import update_user
 from app.filters import RoleFilter
-from app.states import PickAdmin, PickObject
+from app.states import AddTask, PickAdmin, PickObject
 from app.utils import setup_logger
 from app.utils.isonwer import is_owner
 
@@ -35,6 +35,60 @@ async def back_main_menu(message: Message, state: FSMContext):
     logger.info(f"back_main_menu (from_user={message.from_user.id})")
     await state.clear()
     await message.reply(text=messages.RETURN_TO_MAIN_MENU, reply_markup=kb.ownerKb)
+
+
+@owner.message(F.text == labels.ADD_TASK)
+async def add_task(message: Message, state: FSMContext):
+    logger.info(f"add_task (from_user={message.from_user.id})")
+    await state.clear()
+    reply_markup = await kb.get_list_by_role(Role.WORKER, 1, "task_")
+    if not reply_markup:
+        logger.debug("Список пуст")
+        await message.answer(labels.NO_WORKERS, show_alert=True)
+        return
+    await state.set_state(AddTask.user_id)
+    await message.reply(text=messages.CHOOSE_WORKER, reply_markup=reply_markup)
+
+
+@owner.callback_query(F.data.startswith(f"task_{Role.WORKER}_"), AddTask.user_id)
+async def get_user_task(callback: CallbackQuery, state: FSMContext):
+    id = int(callback.data.split("_")[2])
+    await state.update_data(user_id=int(id))
+    await state.set_state(AddTask.object_id)
+    reply_markup = await kb.get_factory_page(1, "task_")
+
+    if not reply_markup:
+        logger.debug("Список пуст")
+        await callback.answer(labels.NO_FACTORIES, show_alert=True)
+        await state.clear()
+        return
+    await callback.message.edit_text(
+        text=messages.CHOOSE_FACTORY_FOR_MASTER, reply_markup=reply_markup
+    )
+
+
+@owner.callback_query(F.data.startswith("task_factory_"), AddTask.object_id)
+async def get_object_task(callback: CallbackQuery, state: FSMContext):
+    id = int(callback.data.split("_")[2])
+    await state.update_data(object_id=int(id))
+    await state.set_state(AddTask.description)
+    await callback.message.edit_text(
+        text=messages.ENTER_ACTIVITY_DURATION, reply_markup=kb.cancelKb
+    )
+
+
+@owner.message(AddTask.description)
+async def get_description_task(message: Message, state: FSMContext):
+    await state.update_data(description=message.text)
+    data = await state.get_data()
+    await state.clear()
+    await message.answer(text=messages.CONFIRM_CHANGE_JOB, reply_markup=None)
+    user = await requests.get_user(data.get("user_id"), False)
+    object = await requests.get_factory(data.get("object_id"))
+    await message.bot.send_message(chat_id=user.tg_id, text=messages.WORKER_NUMBER)
+    await message.bot.send_location(
+        chat_id=user.tg_id, latitude=object.latitude, longitude=object.longitude
+    )
 
 
 # Управление админами
@@ -132,7 +186,7 @@ async def add_admin_confirm(callback: CallbackQuery, state: FSMContext):
 @owner.callback_query(F.data == "list_admins")
 async def admin_list(callback: CallbackQuery, state: FSMContext):
     logger.info(f"admin_list (from_user={callback.from_user.id})")
-    reply_markup = await kb.get_list_by_role(Role.WORKER, 1, callback.message.bot)
+    reply_markup = await kb.get_list_by_role(Role.WORKER, 1)
     if not reply_markup:
         logger.debug("Список пуст")
         await callback.answer(labels.EMPTY_LIST, show_alert=True)
@@ -142,17 +196,20 @@ async def admin_list(callback: CallbackQuery, state: FSMContext):
 
 
 @owner.callback_query(F.data.startswith(f"page_{Role.WORKER}_"))
+@owner.callback_query(F.data.startswith(f"task_page_{Role.WORKER}_"), AddTask.user_id)
 async def show_admin_list_page(callback: CallbackQuery, state: FSMContext):
     logger.info(f"show_admin_list_page (from_user={callback.from_user.id})")
-    reply_markup = await kb.get_list_by_role(
-        Role.WORKER, int(callback.data.split("_")[-1]), callback.bot
-    )
+    key = "task_" if callback.data.split("_")[0] == "task" else ""
+    reply_markup = await kb.get_list_by_role(Role.WORKER, int(callback.data.split("_")[-1]), key)
     if not reply_markup:
         logger.debug("Список пуст")
         await callback.answer(labels.EMPTY_LIST, show_alert=True)
         return
     await callback.answer()
-    await callback.message.edit_text(text=labels.ADMIN_LIST, reply_markup=reply_markup)
+    if key == "task_":
+        await callback.message.edit_text(text=messages.CHOOSE_WORKER, reply_markup=reply_markup)
+    else:
+        await callback.message.edit_text(text=labels.ADMIN_LIST, reply_markup=reply_markup)
 
 
 @owner.callback_query(F.data.startswith(f"{Role.WORKER}_"))
@@ -314,15 +371,22 @@ async def factory_list(callback: CallbackQuery, state: FSMContext):
 
 
 @owner.callback_query(F.data.startswith("page_factory_"))
+@owner.callback_query(F.data.startswith("task_page_factory_"), AddTask.object_id)
 async def show_factory_list_page(callback: CallbackQuery, state: FSMContext):
     logger.info(f"show_admin_list_page (from_user={callback.from_user.id})")
-    reply_markup = await kb.get_factory_page(int(callback.data.split("_")[-1]))
+    key = "task_" if callback.data.split("_")[0] == "task" else ""
+    reply_markup = await kb.get_factory_page(int(callback.data.split("_")[-1]), key)
     if not reply_markup:
         logger.debug("Список пуст")
         await callback.answer(labels.EMPTY_LIST, show_alert=True)
         return
     await callback.answer()
-    await callback.message.edit_text(text=labels.FACTORY_LIST, reply_markup=reply_markup)
+    if key == "task_":
+        await callback.message.edit_text(
+            text=messages.CHOOSE_FACTORY_FOR_MASTER, reply_markup=reply_markup
+        )
+    else:
+        await callback.message.edit_text(text=labels.FACTORY_LIST, reply_markup=reply_markup)
 
 
 @owner.callback_query(F.data.startswith("factory_"))

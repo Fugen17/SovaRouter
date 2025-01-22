@@ -69,8 +69,12 @@ cancelObjectKb = InlineKeyboardMarkup(
     ]
 )
 
+cancelKb = InlineKeyboardMarkup(
+    inline_keyboard=[[InlineKeyboardButton(text=labels.CANCEL_EDITING, callback_data="close_kb")]]
+)
 
-async def get_list_by_role(role: Role, cur_page: int, bot: Bot, key: str = "", end: str = ""):
+
+async def get_list_by_role(role: Role, cur_page: int, key: str = "", end: str = ""):
     """Универсальная клавиатура.
 
     Code:
@@ -115,27 +119,17 @@ async def get_list_by_role(role: Role, cur_page: int, bot: Bot, key: str = "", e
         ),
     )
 
-    if key == "shift_choose_worker_":
-        keyboard.row(
-            InlineKeyboardButton(text=labels.SAVE_CHOISE, callback_data=f"save_shift_choise{end}")
-        )
-
     logger.debug(f"{key}return_manage_{role}")
-    if key == "shift_by_admin_":
+    if key == "task_":
         keyboard.row(
-            InlineKeyboardButton(text=labels.RETURN, callback_data="enter_shift_date"),
-            InlineKeyboardButton(text=labels.CANCEL_EDITING, callback_data="denie_shift"),
+            InlineKeyboardButton(text=labels.CANCEL_EDITING, callback_data="close_kb"),
         )
-    elif key != "shift_choose_worker_":
+    else:
         keyboard.row(
             InlineKeyboardButton(
                 text=labels.RETURN, callback_data=f"{key}return_manage_{role}{end}"
             ),
             InlineKeyboardButton(text=labels.CLOSE, callback_data="close_kb"),
-        )
-    else:
-        keyboard.row(
-            InlineKeyboardButton(text=labels.DENIE_SHIFT, callback_data="denie_shift"),
         )
 
     return keyboard.as_markup()
@@ -189,7 +183,7 @@ confirm_factory_add = InlineKeyboardMarkup(
 )
 
 
-async def get_factory_page(cur_page: int):
+async def get_factory_page(cur_page: int, key: str = ""):
     keyboard = InlineKeyboardBuilder()
 
     factories = await requests.get_factories()
@@ -206,20 +200,23 @@ async def get_factory_page(cur_page: int):
         keyboard.row(
             InlineKeyboardButton(
                 text=factories[i].name,
-                callback_data=f"factory_{factories[i].id}_{cur_page}",
+                callback_data=f"{key}factory_{factories[i].id}_{cur_page}",
             ),
         )
 
     keyboard.row(
         InlineKeyboardButton(
             text=labels.BACK,
-            callback_data=(f"page_factory_{cur_page - 1}" if cur_page - 1 > 0 else "_"),
+            callback_data=(f"{key}page_factory_{cur_page - 1}" if cur_page - 1 > 0 else "_"),
         ),
         InlineKeyboardButton(text=f"{cur_page}/{pages_num}", callback_data="_"),
         InlineKeyboardButton(
             text=labels.FORWARD,
-            callback_data=(f"page_factory_{cur_page + 1}" if cur_page < pages_num else "_"),
+            callback_data=(f"{key}page_factory_{cur_page + 1}" if cur_page < pages_num else "_"),
         ),
+    )
+    keyboard.row(
+        InlineKeyboardButton(text=labels.CLOSE, callback_data="close_kb"),
     )
 
     return keyboard.as_markup()

@@ -2,7 +2,7 @@
 
 INSTRUCTION_BUTTON = "Инструкция"
 GET_TASKS = "Посомтреть объекты"
-ADD_TASK = "Добавить объект"
+ADD_TASK = "Добавить задание"
 
 # меню мастера
 ADMIN_INSTRUCION_BUTTON = "Инструкция администратора"

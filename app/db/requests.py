@@ -19,6 +19,7 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import aliased
 
 from app.config.roles import Role
+from app.config.task_status import TaskStatus
 from app.db.exceptions import AlreadyExistsError, BadFormatError, BadKeyError, DBError
 from app.db.models import Object, User, WorkerTask, async_session
 from app.utils import setup_logger
@@ -169,3 +170,28 @@ async def get_factories(deleted: bool = False) -> Sequence[Object]:
     async with async_session() as session:
         factories = await session.scalars(select(Object).where(Object.is_deleted.is_(deleted)))
         return factories.all()
+
+
+async def add_task(user_id: int, object_id: int, description: str):
+    logger.debug("add_task to db")
+    async with async_session() as session:
+        task = WorkerTask(user_id=user_id, object_id=object_id, description=description)
+        session.add(task)
+        try:
+            await session.commit()
+        except Exception as ex:
+            raise DBError(ex)
+        return task
+
+
+async def update_task(task_id: int, status: TaskStatus, note: str = ""):
+    logger.debug("add_task to db")
+    async with async_session() as session:
+        task: WorkerTask = await session.scalar(select(WorkerTask).where(WorkerTask.id == task_id))
+
+        if not task:
+            raise BadKeyError()
+        task.status = status
+        task.note = note
+        task.completed = datetime.now()
+        await session.commit()

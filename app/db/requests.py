@@ -1,22 +1,8 @@
-from datetime import date, datetime
-from typing import Sequence, Tuple
+from datetime import datetime
+from typing import Sequence
 
-from sqlalchemy import (
-    Date,
-    and_,
-    case,
-    cast,
-    desc,
-    false,
-    func,
-    or_,
-    select,
-    true,
-    union,
-)
-from sqlalchemy.engine.row import Row, RowMapping
-from sqlalchemy.exc import DBAPIError, IntegrityError
-from sqlalchemy.orm import aliased
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.config.roles import Role
 from app.config.task_status import TaskStatus

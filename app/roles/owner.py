@@ -9,7 +9,7 @@ from app.config.db import ObjectLen, UserLen, WorkerTaskLen
 from app.config.roles import Role
 from app.db import requests
 from app.db.exceptions import AlreadyExistsError, BadKeyError
-from app.db.models import User, WorkerTask
+from app.db.models import User
 from app.db.requests import update_user
 from app.filters import RoleFilter
 from app.states import AddTask, PickAdmin, PickObject

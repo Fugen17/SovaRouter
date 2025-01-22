@@ -1,7 +1,5 @@
-from datetime import date
 from math import ceil
 
-from aiogram import Bot
 from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,

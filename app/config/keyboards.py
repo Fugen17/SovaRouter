@@ -1,2 +1,2 @@
 # Количество inline кнопок на одной странице
-KEYBOARD_PAGE_SIZE = 1
+KEYBOARD_PAGE_SIZE = 6

@@ -32,7 +32,7 @@ async def cmd_start(message: Message, state: FSMContext):
 
     match user.role:
         case Role.WORKER:
-            msg = await message.answer(text=messages.MASTER_INSTRUCTION)
+            msg = await message.answer(text=messages.WORKER_INSTRUCTION)
             await message.bot.unpin_all_chat_messages(message.from_user.id)
             await message.bot.pin_chat_message(message.from_user.id, msg.message_id)
         case Role.OWNER:

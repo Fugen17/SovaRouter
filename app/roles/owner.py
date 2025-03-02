@@ -2,7 +2,7 @@ import random
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove, TelegramObject
+from aiogram.types import CallbackQuery, Message, TelegramObject
 
 from app import keyboards as kb
 from app.config import labels, messages
@@ -92,16 +92,19 @@ async def get_description_task(message: Message, state: FSMContext):
     task = await requests.add_task(
         admin.id, user.id, object.id, data.get("description")
     )
-    msg = await message.bot.send_message(
-        chat_id=user.tg_id,
-        text=messages.ASSIGN_TASK.format(object.name, task.description),
-    )
-    await message.bot.send_location(
-        chat_id=user.tg_id,
-        latitude=object.latitude,
-        longitude=object.longitude,
-        reply_markup=await kb.get_task_kb(task.id, msg.message_id),
-    )
+    try:
+        msg = await message.bot.send_message(
+            chat_id=user.tg_id,
+            text=messages.ASSIGN_TASK.format(object.name, task.description),
+        )
+        await message.bot.send_location(
+            chat_id=user.tg_id,
+            latitude=object.latitude,
+            longitude=object.longitude,
+            reply_markup=await kb.get_task_kb(task.id, msg.message_id),
+        )
+    except Exception:
+        logger.warning("User is not reachable in tg")
 
 
 # Управление админами

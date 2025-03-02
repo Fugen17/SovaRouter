@@ -207,3 +207,15 @@ async def get_task(task_id: int) -> WorkerTask:
         if not task:
             raise BadKeyError()
         return task
+
+
+async def get_tasks(user_id: int, status: TaskStatus) -> Sequence[WorkerTask]:
+    logger.debug("get_tasks from db")
+    async with async_session() as session:
+        tasks = await session.scalars(
+            select(WorkerTask).where(
+                WorkerTask.user_id == user_id, WorkerTask.status == status
+            )
+        )
+
+        return tasks.all()

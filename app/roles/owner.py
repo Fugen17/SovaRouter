@@ -136,7 +136,7 @@ async def add_admin_name(callback: CallbackQuery, state: FSMContext):
 @owner.message(PickAdmin.name)
 async def add_admin_id(message: Message, state: FSMContext):
     logger.info(f"add_admin_id (from_user={message.from_user.id})")
-    await state.update_data(name=message.text)
+    await state.update_data(name=message.text[: UserLen.fullname])
     await state.set_state(PickAdmin.id)
     key = random.randint(100000, 999999)
     msg = await message.answer(
@@ -154,80 +154,6 @@ async def cancel_adding_admin(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer(text=messages.CANCEL_ADD)
     timer = TimerSingleton()
     await timer.stop()
-
-
-@owner.message(PickAdmin.name)
-async def admin_add_confirm(message: Message, state: FSMContext):
-    logger.info(f"admin_add_confirm (from_user={message.from_user.id})")
-    admin_name = message.text[: UserLen.fullname]
-    await state.update_data(name=admin_name)
-    try:
-        data = await state.get_data()
-        user_info = await message.bot.get_chat(data.get("id"))
-        await message.answer(
-            text=messages.ADMIN_ADD_CONF.format(user_info.username, data.get("name")),
-            reply_markup=kb.confirmAdminAdd,
-        )
-    except TelegramBadRequest:
-        logger.debug("tg id не существует")
-        await message.answer(
-            text=messages.TG_ID_NOT_EXIST, reply_markup=kb.ownerEditingKb
-        )
-        await state.clear()
-    except Exception as ex:
-        logger.error(f"Ошибка добавления админа:\n{ex}")
-
-
-@owner.callback_query(F.data == "add_admin_denied", PickAdmin.name)
-async def add_admin_denied(callback: CallbackQuery, state: FSMContext):
-    logger.info(f"add_admin_denied (from_user={callback.from_user.id})")
-    await state.clear()
-    await callback.answer()
-    await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.message.answer(
-        text=messages.CANCEL_ADD, reply_markup=kb.ownerEditingKb
-    )
-
-
-@owner.callback_query(F.data == "add_admin_confirm", PickAdmin.name)
-async def add_admin_confirm(callback: CallbackQuery, state: FSMContext):
-    logger.info(f"add_admin_confirm (from_user={callback.from_user.id})")
-    data = await state.get_data()
-    try:
-        tg_id = int(data.get("id"))
-        potential_worker = await requests.get_user(tg_id)
-        if (potential_worker.role >= Role.WORKER) or is_owner(str(tg_id)):
-            logger.debug("Роль юзера >= worker")
-            await callback.message.answer(text=messages.INCORRECT_TG_ID)
-            return
-        await update_user(
-            tg_id, {User.fullname: data.get("name"), User.role: Role.WORKER}
-        )
-        await callback.message.answer(
-            text=messages.CONFIRM_ADD, reply_markup=kb.ownerEditingKb
-        )
-
-        await callback.message.bot.send_message(
-            chat_id=data.get("id"),
-            text=messages.GIVE_WORKER_ROLE.format(data.get("name")),
-        )
-        msg = await callback.message.bot.send_message(
-            chat_id=data.get("id"), text=messages.WORKER_INSTRUCTION
-        )
-        await callback.message.bot.pin_chat_message(
-            chat_id=data.get("id"), message_id=msg.message_id
-        )
-    except BadKeyError:
-        logger.debug("Юзер не нажимал /start")
-        await callback.message.answer(
-            text=messages.DOESNT_EXIST, reply_markup=kb.ownerEditingKb
-        )
-    except Exception as ex:
-        logger.error(f"Невохможно добавить админа:\n{ex}")
-    finally:
-        await state.clear()
-        await callback.answer()
-        await callback.message.edit_reply_markup(reply_markup=None)
 
 
 @owner.callback_query(F.data == "list_admins")

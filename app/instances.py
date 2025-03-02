@@ -6,7 +6,7 @@ from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.types import Message
 
-from app.config.messages import RUNOUT
+from app.config.messages import RUNOUT, SUCCEED_LOGIN
 from app.utils import setup_logger
 
 logger = setup_logger(__name__)
@@ -28,10 +28,7 @@ class ThreadSafeKey:
         """Проверяет, содержится ли элемент в множестве."""
         with cls._lock:
             logger.debug(f"is_valid (our == your): {cls._key} == {key} ?")
-            if key == cls._key:
-                cls._key = None
-                return True
-            return False
+            return key == cls._key
 
     @classmethod
     def clear(cls):
@@ -95,11 +92,14 @@ class TimerSingleton:
             self.message_id = message.message_id
             self.chat_id = message.chat.id
 
-    async def stop(self):
+    async def stop(self, name=None):
         """Останавливает таймер до истечения времени"""
+        logger.debug(f"Stop timer ({name})")
         async with self._lock:
             if self._task is not None:
                 # Отменяем задачу, если она запущена
+                if name:
+                    await bot.send_message(self.chat_id, SUCCEED_LOGIN.format(name))
                 self._task.cancel()
                 self._event.set()
 

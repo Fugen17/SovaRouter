@@ -1,3 +1,4 @@
+import asyncio
 import os
 import secrets
 
@@ -5,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from app.instances import ThreadSafeKey
+from app.instances import ThreadSafeKey, TimerSingleton, loop
 from app.utils import setup_logger
 
 server = FastAPI()
@@ -15,6 +16,7 @@ logger = setup_logger(__name__)
 
 class AuthRequest(BaseModel):
     key: int
+    name: str
 
 
 def run_server():
@@ -29,8 +31,9 @@ async def favicon():
 
 
 @server.post("/auth")
-def authenticate(request: AuthRequest):
+async def authenticate(request: AuthRequest):
     if ThreadSafeKey.is_valid(request.key):
+        asyncio.run_coroutine_threadsafe(TimerSingleton().stop(request.name), loop)
         print("OK")
         return {"token": secrets.token_hex(16)}
     else:

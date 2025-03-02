@@ -200,9 +200,8 @@ async def admin_info(callback: CallbackQuery, state: FSMContext):
     page = int(callback.data.split("_")[2])
 
     user = await requests.get_user(id, use_tg=False)
-    user_tg_info = await callback.bot.get_chat(user.tg_id)
     await callback.message.edit_text(
-        text=messages.WORKER_INFO.format(user.fullname, user_tg_info.username),
+        text=messages.WORKER_INFO.format(user.fullname),
         reply_markup=await kb.manage_people(
             Role.WORKER, user_tg_id=user.tg_id, back_page=page
         ),
@@ -216,9 +215,8 @@ async def dismiss_admin(callback: CallbackQuery, state: FSMContext):
     user_tg_id = int(callback.data.split("_")[2])
 
     user = await requests.get_user(user_tg_id)
-    user_tg_info = await callback.bot.get_chat(user_tg_id)
     await callback.message.edit_text(
-        text=messages.DELETE_WORKER.format(user.fullname, user_tg_info.username),
+        text=messages.DELETE_WORKER.format(user.fullname),
         reply_markup=await kb.person_delete(Role.WORKER, user_tg_id),
     )
 
@@ -234,12 +232,6 @@ async def confirm_dismiss_admin(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text(
             text=messages.WORKER_DELETED, reply_markup=None
         )
-        await callback.bot.send_message(
-            chat_id=user_tg_id,
-            text=messages.YOU_DISMISSED,
-            reply_markup=ReplyKeyboardRemove(),
-        )
-        await callback.bot.unpin_all_chat_messages(user_tg_id)
     except Exception as ex:
         logger.error(f"confirm_dismiss\n{ex}")
 

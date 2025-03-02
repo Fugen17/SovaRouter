@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.config.roles import Role
 from app.db.models import User
-from app.db.requests import set_user, update_user
+from app.db.requests import get_user, set_user, update_user
 from app.instances import ThreadSafeKey, TimerSingleton, loop
 from app.utils import setup_logger
 
@@ -19,6 +19,10 @@ logger = setup_logger(__name__)
 
 class AuthRequest(BaseModel):
     key: int
+
+
+class GetRequest(BaseModel):
+    token: int
 
 
 def run_server():
@@ -48,5 +52,15 @@ async def authenticate(request: AuthRequest):
         asyncio.run_coroutine_threadsafe(TimerSingleton().stop(name), loop)
         return {"token": token}
     else:
-        print("FALSE")
-        raise HTTPException(status_code=401, detail="Неверный ключ")
+        logger.debug("Key is wrong")
+        raise HTTPException(status_code=401, detail="Token is invalid")
+
+
+@server.get("/objects")
+async def get_tasks(request: GetRequest):
+    user = asyncio.run_coroutine_threadsafe(get_user(request.token), loop).result()
+    if user.role != Role.WORKER:
+        raise HTTPException(
+            status_code=401, detail="Token has expired, please log in again"
+        )
+    return {"data": "ok"}

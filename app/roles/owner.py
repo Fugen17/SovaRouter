@@ -14,7 +14,7 @@ from app.db.exceptions import AlreadyExistsError, BadKeyError
 from app.db.models import User
 from app.db.requests import update_user
 from app.filters import RoleFilter
-from app.instances import ThreadSafeKey, TimerSingleton
+from app.instances import TimerSingleton
 from app.states import AddTask, PickAdmin, PickObject
 from app.utils import setup_logger
 from app.utils.isonwer import is_owner
@@ -139,13 +139,12 @@ async def add_admin_id(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
     await state.set_state(PickAdmin.id)
     key = random.randint(100000, 999999)
-    ThreadSafeKey.add(key)
     msg = await message.answer(
         text=messages.ENTER_WORKER_ID.format(key),
         reply_markup=kb.cancelAddingKb,
     )
     timer = TimerSingleton()
-    await timer.start(msg)
+    await timer.start(msg, key)
 
 
 @owner.callback_query(F.data == "cancel_adding")

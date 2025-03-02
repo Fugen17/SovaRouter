@@ -79,15 +79,21 @@ class TimerSingleton:
         else:
             logger.debug("Не удалось найти сообщение для удаления.")
 
-    async def start(self, message: Message):
+    async def start(self, message: Message, key: int):
         """Запускает таймер и сохраняет ID сообщения"""
         async with self._lock:
-            if self._task is None or self._task.done():
-                self._event.clear()
-                self._task = asyncio.create_task(self._start_timer())
-                # Сохраняем ID сообщения и chat_id для дальнейшего удаления
-                self.message_id = message.message_id
-                self.chat_id = message.chat.id
+            if self._task is not None and not self._task.done():
+                self._task.cancel()
+                try:
+                    await self._task
+                except asyncio.CancelledError:
+                    print("Предыдущий таймер был отменен.")
+            ThreadSafeKey.add(key)
+            self._event.clear()
+            self._task = asyncio.create_task(self._start_timer())
+            # Сохраняем ID сообщения и chat_id для дальнейшего удаления
+            self.message_id = message.message_id
+            self.chat_id = message.chat.id
 
     async def stop(self):
         """Останавливает таймер до истечения времени"""

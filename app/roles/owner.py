@@ -1,3 +1,5 @@
+import random
+
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
@@ -12,6 +14,7 @@ from app.db.exceptions import AlreadyExistsError, BadKeyError
 from app.db.models import User
 from app.db.requests import update_user
 from app.filters import RoleFilter
+from app.instances import ThreadSafeKey, TimerSingleton
 from app.states import AddTask, PickAdmin, PickObject
 from app.utils import setup_logger
 from app.utils.isonwer import is_owner
@@ -63,7 +66,9 @@ async def get_user_task(callback: CallbackQuery, state: FSMContext):
         await callback.answer(messages.NO_OBJECTS, show_alert=True)
         await state.clear()
         return
-    await callback.message.edit_text(text=messages.CHOOSE_OBJECT, reply_markup=reply_markup)
+    await callback.message.edit_text(
+        text=messages.CHOOSE_OBJECT, reply_markup=reply_markup
+    )
 
 
 @owner.callback_query(F.data.startswith("task_factory_"), AddTask.object_id)
@@ -87,7 +92,9 @@ async def get_description_task(message: Message, state: FSMContext):
     user = await requests.get_user(data.get("user_id"), False)
     admin = await requests.get_user(message.from_user.id)
     object = await requests.get_factory(data.get("object_id"))
-    task = await requests.add_task(admin.id, user.id, object.id, data.get("description"))
+    task = await requests.add_task(
+        admin.id, user.id, object.id, data.get("description")
+    )
     msg = await message.bot.send_message(
         chat_id=user.tg_id,
         text=messages.ASSIGN_TASK.format(object.name, task.description),
@@ -109,28 +116,45 @@ async def editing_admins(event: TelegramObject, state: FSMContext):
     # Если событие - это callback_query, то вызываем answer()
     if isinstance(event, CallbackQuery):
         await event.answer()
-
-        await event.message.edit_text(text=messages.CHOOSE_OPTION, reply_markup=kb.adminManageKb)
+        await event.message.edit_text(
+            text=messages.CHOOSE_OPTION, reply_markup=kb.adminManageKb
+        )
     else:
         await event.reply(text=messages.CHOOSE_OPTION, reply_markup=kb.adminManageKb)
 
 
 @owner.callback_query(F.data == "add_admin")
-async def add_admin_id(callback: CallbackQuery, state: FSMContext):
-    logger.info(f"add_admin_id (from_user={callback.from_user.id})")
+async def add_admin_name(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"add_admin_name (from_user={callback.from_user.id})")
     await state.clear()
-    await state.set_state(PickAdmin.id)
+    await state.set_state(PickAdmin.name)
     await callback.answer()
     await callback.message.edit_text(text=messages.WORKER_ADD, reply_markup=None)
-    await callback.message.answer(text=messages.ENTER_WORKER_ID)
+    await callback.message.answer(text=messages.ENTER_WORKER_NAME)
 
 
-@owner.message(PickAdmin.id)
-async def add_admin_name(message: Message, state: FSMContext):
-    logger.info(f"add_admin_name (from_user={message.from_user.id})")
-    await state.update_data(id=message.text)
-    await state.set_state(PickAdmin.name)
-    await message.answer(text=messages.ENTER_WORKER_NAME)
+@owner.message(PickAdmin.name)
+async def add_admin_id(message: Message, state: FSMContext):
+    logger.info(f"add_admin_id (from_user={message.from_user.id})")
+    await state.update_data(name=message.text)
+    await state.set_state(PickAdmin.id)
+    key = random.randint(100000, 999999)
+    ThreadSafeKey.add(key)
+    msg = await message.answer(
+        text=messages.ENTER_WORKER_ID.format(key),
+        reply_markup=kb.cancelAddingKb,
+    )
+    timer = TimerSingleton()
+    await timer.start(msg)
+
+
+@owner.callback_query(F.data == "cancel_adding")
+async def cancel_adding_admin(callback: CallbackQuery, state: FSMContext):
+    logger.info(f"cancel_adding_admin (from_user={callback.from_user.id})")
+    await state.clear()
+    await callback.message.answer(text=messages.CANCEL_ADD)
+    timer = TimerSingleton()
+    await timer.stop()
 
 
 @owner.message(PickAdmin.name)
@@ -147,7 +171,9 @@ async def admin_add_confirm(message: Message, state: FSMContext):
         )
     except TelegramBadRequest:
         logger.debug("tg id не существует")
-        await message.answer(text=messages.TG_ID_NOT_EXIST, reply_markup=kb.ownerEditingKb)
+        await message.answer(
+            text=messages.TG_ID_NOT_EXIST, reply_markup=kb.ownerEditingKb
+        )
         await state.clear()
     except Exception as ex:
         logger.error(f"Ошибка добавления админа:\n{ex}")
@@ -159,7 +185,9 @@ async def add_admin_denied(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer()
     await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.message.answer(text=messages.CANCEL_ADD, reply_markup=kb.ownerEditingKb)
+    await callback.message.answer(
+        text=messages.CANCEL_ADD, reply_markup=kb.ownerEditingKb
+    )
 
 
 @owner.callback_query(F.data == "add_admin_confirm", PickAdmin.name)
@@ -173,11 +201,16 @@ async def add_admin_confirm(callback: CallbackQuery, state: FSMContext):
             logger.debug("Роль юзера >= worker")
             await callback.message.answer(text=messages.INCORRECT_TG_ID)
             return
-        await update_user(tg_id, {User.fullname: data.get("name"), User.role: Role.WORKER})
-        await callback.message.answer(text=messages.CONFIRM_ADD, reply_markup=kb.ownerEditingKb)
+        await update_user(
+            tg_id, {User.fullname: data.get("name"), User.role: Role.WORKER}
+        )
+        await callback.message.answer(
+            text=messages.CONFIRM_ADD, reply_markup=kb.ownerEditingKb
+        )
 
         await callback.message.bot.send_message(
-            chat_id=data.get("id"), text=messages.GIVE_WORKER_ROLE.format(data.get("name"))
+            chat_id=data.get("id"),
+            text=messages.GIVE_WORKER_ROLE.format(data.get("name")),
         )
         msg = await callback.message.bot.send_message(
             chat_id=data.get("id"), text=messages.WORKER_INSTRUCTION
@@ -187,7 +220,9 @@ async def add_admin_confirm(callback: CallbackQuery, state: FSMContext):
         )
     except BadKeyError:
         logger.debug("Юзер не нажимал /start")
-        await callback.message.answer(text=messages.DOESNT_EXIST, reply_markup=kb.ownerEditingKb)
+        await callback.message.answer(
+            text=messages.DOESNT_EXIST, reply_markup=kb.ownerEditingKb
+        )
     except Exception as ex:
         logger.error(f"Невохможно добавить админа:\n{ex}")
     finally:
@@ -208,21 +243,30 @@ async def admin_list(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(text=labels.WORKER_LIST, reply_markup=reply_markup)
 
 
+# ---
+
+
 @owner.callback_query(F.data.startswith(f"page_{Role.WORKER}_"))
 @owner.callback_query(F.data.startswith(f"task_page_{Role.WORKER}_"), AddTask.user_id)
 async def show_admin_list_page(callback: CallbackQuery, state: FSMContext):
     logger.info(f"show_admin_list_page (from_user={callback.from_user.id})")
     key = "task_" if callback.data.split("_")[0] == "task" else ""
-    reply_markup = await kb.get_list_by_role(Role.WORKER, int(callback.data.split("_")[-1]), key)
+    reply_markup = await kb.get_list_by_role(
+        Role.WORKER, int(callback.data.split("_")[-1]), key
+    )
     if not reply_markup:
         logger.debug("Список пуст")
         await callback.answer(labels.EMPTY_LIST, show_alert=True)
         return
     await callback.answer()
     if key == "task_":
-        await callback.message.edit_text(text=messages.CHOOSE_WORKER, reply_markup=reply_markup)
+        await callback.message.edit_text(
+            text=messages.CHOOSE_WORKER, reply_markup=reply_markup
+        )
     else:
-        await callback.message.edit_text(text=labels.WORKER_LIST, reply_markup=reply_markup)
+        await callback.message.edit_text(
+            text=labels.WORKER_LIST, reply_markup=reply_markup
+        )
 
 
 @owner.callback_query(F.data.startswith(f"{Role.WORKER}_"))
@@ -236,7 +280,9 @@ async def admin_info(callback: CallbackQuery, state: FSMContext):
     user_tg_info = await callback.bot.get_chat(user.tg_id)
     await callback.message.edit_text(
         text=messages.WORKER_INFO.format(user.fullname, user_tg_info.username),
-        reply_markup=await kb.manage_people(Role.WORKER, user_tg_id=user.tg_id, back_page=page),
+        reply_markup=await kb.manage_people(
+            Role.WORKER, user_tg_id=user.tg_id, back_page=page
+        ),
     )
 
 
@@ -262,9 +308,13 @@ async def confirm_dismiss_admin(callback: CallbackQuery, state: FSMContext):
 
     await requests.update_user(user_tg_id, {User.role: Role.USER})
     try:
-        await callback.message.edit_text(text=messages.WORKER_DELETED, reply_markup=None)
+        await callback.message.edit_text(
+            text=messages.WORKER_DELETED, reply_markup=None
+        )
         await callback.bot.send_message(
-            chat_id=user_tg_id, text=messages.YOU_DISMISSED, reply_markup=ReplyKeyboardRemove()
+            chat_id=user_tg_id,
+            text=messages.YOU_DISMISSED,
+            reply_markup=ReplyKeyboardRemove(),
         )
         await callback.bot.unpin_all_chat_messages(user_tg_id)
     except Exception as ex:
@@ -289,7 +339,9 @@ async def objects_manage(event: TelegramObject, state: FSMContext):
     await state.clear()
     if isinstance(event, CallbackQuery):
         await event.answer()
-        await event.message.edit_text(text=messages.CHOOSE_OPTION, reply_markup=kb.objects_manage)
+        await event.message.edit_text(
+            text=messages.CHOOSE_OPTION, reply_markup=kb.objects_manage
+        )
     else:
         await event.reply(text=messages.CHOOSE_OPTION, reply_markup=kb.objects_manage)
 
@@ -327,7 +379,9 @@ async def add_factory_confirm(message: Message, state: FSMContext):
     if not message.location:
         await message.answer(text=messages.NOT_LOCATION, reply_markup=kb.cancelObjectKb)
         return
-    await state.update_data(location=(message.location.latitude, message.location.longitude))
+    await state.update_data(
+        location=(message.location.latitude, message.location.longitude)
+    )
 
     data = await state.get_data()
     await message.answer(
@@ -354,11 +408,15 @@ async def add_factory(callback: CallbackQuery, state: FSMContext):
 
     data = await state.get_data()
     try:
-        await requests.set_factory(data.get("name"), data.get("description"), data.get("location"))
+        await requests.set_factory(
+            data.get("name"), data.get("description"), data.get("location")
+        )
         await callback.message.answer(text=messages.CONFIRM_ADD, reply_markup=None)
     except AlreadyExistsError:
         logger.debug("Предприятие уже существует")
-        await callback.message.answer(text=messages.ALREADY_EXISTS_OBJECT, reply_markup=None)
+        await callback.message.answer(
+            text=messages.ALREADY_EXISTS_OBJECT, reply_markup=None
+        )
     finally:
         await callback.message.edit_reply_markup(reply_markup=None)
         await state.clear()
@@ -394,9 +452,13 @@ async def show_factory_list_page(callback: CallbackQuery, state: FSMContext):
         return
     await callback.answer()
     if key == "task_":
-        await callback.message.edit_text(text=messages.CHOOSE_OBJECT, reply_markup=reply_markup)
+        await callback.message.edit_text(
+            text=messages.CHOOSE_OBJECT, reply_markup=reply_markup
+        )
     else:
-        await callback.message.edit_text(text=labels.OBJECT_LIST, reply_markup=reply_markup)
+        await callback.message.edit_text(
+            text=labels.OBJECT_LIST, reply_markup=reply_markup
+        )
 
 
 @owner.callback_query(F.data.startswith("factory_"))
@@ -406,7 +468,9 @@ async def factory_info(callback: CallbackQuery, state: FSMContext):
     fact_id = int(callback.data.split("_")[1])
     factory = await requests.get_factory(fact_id)
     msg_location_id = await callback.bot.send_location(
-        chat_id=callback.from_user.id, latitude=factory.latitude, longitude=factory.longitude
+        chat_id=callback.from_user.id,
+        latitude=factory.latitude,
+        longitude=factory.longitude,
     )
     await callback.message.edit_text(
         text=messages.OBJECT_INFO.format(factory.name, factory.description),

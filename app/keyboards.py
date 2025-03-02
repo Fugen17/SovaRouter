@@ -46,12 +46,28 @@ confirmAdminAdd = InlineKeyboardMarkup(
 
 cancelObjectKb = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text=labels.CANCEL_EDITING, callback_data="return_factories")]
+        [
+            InlineKeyboardButton(
+                text=labels.CANCEL_EDITING, callback_data="return_factories"
+            )
+        ]
     ]
 )
 
 cancelKb = InlineKeyboardMarkup(
-    inline_keyboard=[[InlineKeyboardButton(text=labels.CANCEL_EDITING, callback_data="close_kb")]]
+    inline_keyboard=[
+        [InlineKeyboardButton(text=labels.CANCEL_EDITING, callback_data="close_kb")]
+    ]
+)
+
+cancelAddingKb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text=labels.CANCEL_EDITING, callback_data="cancel_adding"
+            )
+        ]
+    ]
 )
 
 adminManageKb = InlineKeyboardMarkup(
@@ -68,10 +84,12 @@ async def get_task_kb(task_id: int, msg_id: int):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=labels.TASK_COMPLETED, callback_data=f"mytask_complete_{task_id}_{msg_id}"
+                    text=labels.TASK_COMPLETED,
+                    callback_data=f"mytask_complete_{task_id}_{msg_id}",
                 ),
                 InlineKeyboardButton(
-                    text=labels.TASK_CANCELED, callback_data=f"mytask_denie_{task_id}_{msg_id}"
+                    text=labels.TASK_CANCELED,
+                    callback_data=f"mytask_denie_{task_id}_{msg_id}",
                 ),
             ]
         ]
@@ -82,7 +100,9 @@ async def task_back_kb(task_id: int):
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text=labels.RETURN, callback_data=f"mytask_back_{task_id}"),
+                InlineKeyboardButton(
+                    text=labels.RETURN, callback_data=f"mytask_back_{task_id}"
+                ),
             ]
         ]
     )
@@ -122,7 +142,9 @@ async def get_list_by_role(role: Role, cur_page: int, key: str = "", end: str = 
     keyboard.row(
         InlineKeyboardButton(
             text=labels.BACK,
-            callback_data=(f"{key}page_{role}_{cur_page - 1}{end}" if cur_page - 1 > 0 else "_"),
+            callback_data=(
+                f"{key}page_{role}_{cur_page - 1}{end}" if cur_page - 1 > 0 else "_"
+            ),
         ),
         InlineKeyboardButton(text=f"{cur_page}/{pages_num}", callback_data="_"),
         InlineKeyboardButton(
@@ -153,13 +175,17 @@ async def manage_people(role: Role, user_tg_id: int, back_page: int):
     keyboard = InlineKeyboardBuilder()
 
     keyboard.row(
-        InlineKeyboardButton(text=labels.DISMISS, callback_data=f"dismiss_{role}_{user_tg_id}")
+        InlineKeyboardButton(
+            text=labels.DISMISS, callback_data=f"dismiss_{role}_{user_tg_id}"
+        )
     )
 
     # через if добавить кнопки для мастеров и работников
 
     keyboard.row(
-        InlineKeyboardButton(text=labels.RETURN, callback_data=f"page_{role}_{back_page}"),
+        InlineKeyboardButton(
+            text=labels.RETURN, callback_data=f"page_{role}_{back_page}"
+        ),
         InlineKeyboardButton(text=labels.CLOSE, callback_data="close_kb"),
     )
     return keyboard.as_markup()
@@ -169,11 +195,15 @@ async def person_delete(role: Role, user_tg_id: int):
     keyboard = InlineKeyboardBuilder()
 
     keyboard.row(
-        InlineKeyboardButton(text=labels.YES, callback_data=f"confirm_dismiss_{role}_{user_tg_id}")
+        InlineKeyboardButton(
+            text=labels.YES, callback_data=f"confirm_dismiss_{role}_{user_tg_id}"
+        )
     )
 
     keyboard.row(
-        InlineKeyboardButton(text=labels.NO, callback_data=f"denied_dismiss_{role}_{user_tg_id}")
+        InlineKeyboardButton(
+            text=labels.NO, callback_data=f"denied_dismiss_{role}_{user_tg_id}"
+        )
     )
     return keyboard.as_markup()
 
@@ -221,12 +251,16 @@ async def get_factory_page(cur_page: int, key: str = ""):
     keyboard.row(
         InlineKeyboardButton(
             text=labels.BACK,
-            callback_data=(f"{key}page_factory_{cur_page - 1}" if cur_page - 1 > 0 else "_"),
+            callback_data=(
+                f"{key}page_factory_{cur_page - 1}" if cur_page - 1 > 0 else "_"
+            ),
         ),
         InlineKeyboardButton(text=f"{cur_page}/{pages_num}", callback_data="_"),
         InlineKeyboardButton(
             text=labels.FORWARD,
-            callback_data=(f"{key}page_factory_{cur_page + 1}" if cur_page < pages_num else "_"),
+            callback_data=(
+                f"{key}page_factory_{cur_page + 1}" if cur_page < pages_num else "_"
+            ),
         ),
     )
     keyboard.row(
@@ -241,13 +275,18 @@ async def manage_object(fact_id: int, msg_location_id: int):
 
     keyboard.row(
         InlineKeyboardButton(
-            text=labels.DELETE, callback_data=f"delete_factory_{fact_id}_{msg_location_id}"
+            text=labels.DELETE,
+            callback_data=f"delete_factory_{fact_id}_{msg_location_id}",
         ),
     )
 
     keyboard.row(
-        InlineKeyboardButton(text=labels.RETURN, callback_data=f"factory_list_{msg_location_id}"),
-        InlineKeyboardButton(text=labels.CLOSE, callback_data=f"close_kb_{msg_location_id}"),
+        InlineKeyboardButton(
+            text=labels.RETURN, callback_data=f"factory_list_{msg_location_id}"
+        ),
+        InlineKeyboardButton(
+            text=labels.CLOSE, callback_data=f"close_kb_{msg_location_id}"
+        ),
     )
 
     return keyboard.as_markup()
@@ -258,7 +297,8 @@ async def confirm_delete_fact(fact_id: int, msg_location_id: int):
 
     keyboard.row(
         InlineKeyboardButton(
-            text=labels.YES, callback_data=f"confirm_delete_factory_{fact_id}_{msg_location_id}"
+            text=labels.YES,
+            callback_data=f"confirm_delete_factory_{fact_id}_{msg_location_id}",
         ),
         InlineKeyboardButton(
             text=labels.NO, callback_data=f"denied_dismiss_factory_{msg_location_id}"

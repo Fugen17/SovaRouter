@@ -12,6 +12,8 @@ python = "^3.11"
 aiogram = "^3.13.1"
 sqlalchemy = "^2.0.36"
 asyncpg = "^0.30.0"
+uvicorn = "^0.34.0"
+fastapi = "^0.115.11"
 
 
 [build-system]

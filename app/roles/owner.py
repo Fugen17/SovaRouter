@@ -1,7 +1,6 @@
 import random
 
 from aiogram import F, Router
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove, TelegramObject
 
@@ -10,14 +9,12 @@ from app.config import labels, messages
 from app.config.db import ObjectLen, UserLen, WorkerTaskLen
 from app.config.roles import Role
 from app.db import requests
-from app.db.exceptions import AlreadyExistsError, BadKeyError
+from app.db.exceptions import AlreadyExistsError
 from app.db.models import User
-from app.db.requests import update_user
 from app.filters import RoleFilter
 from app.instances import TimerSingleton
 from app.states import AddTask, PickAdmin, PickObject
 from app.utils import setup_logger
-from app.utils.isonwer import is_owner
 
 logger = setup_logger(__name__)
 
@@ -136,7 +133,8 @@ async def add_admin_name(callback: CallbackQuery, state: FSMContext):
 @owner.message(PickAdmin.name)
 async def add_admin_id(message: Message, state: FSMContext):
     logger.info(f"add_admin_id (from_user={message.from_user.id})")
-    await state.update_data(name=message.text[: UserLen.fullname])
+    worker_name = message.text[: UserLen.fullname]
+    await state.update_data(name=worker_name)
     await state.set_state(PickAdmin.id)
     key = random.randint(100000, 999999)
     msg = await message.answer(
@@ -144,7 +142,7 @@ async def add_admin_id(message: Message, state: FSMContext):
         reply_markup=kb.cancelAddingKb,
     )
     timer = TimerSingleton()
-    await timer.start(msg, key)
+    await timer.start(msg, (key, worker_name))
 
 
 @owner.callback_query(F.data == "cancel_adding")

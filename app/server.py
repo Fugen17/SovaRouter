@@ -6,6 +6,9 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from app.config.roles import Role
+from app.db.models import User
+from app.db.requests import set_user, update_user
 from app.instances import ThreadSafeKey, TimerSingleton, loop
 from app.utils import setup_logger
 
@@ -16,7 +19,6 @@ logger = setup_logger(__name__)
 
 class AuthRequest(BaseModel):
     key: int
-    name: str
 
 
 def run_server():
@@ -32,10 +34,19 @@ async def favicon():
 
 @server.post("/auth")
 async def authenticate(request: AuthRequest):
-    if ThreadSafeKey.is_valid(request.key):
-        asyncio.run_coroutine_threadsafe(TimerSingleton().stop(request.name), loop)
-        print("OK")
-        return {"token": secrets.token_hex(16)}
+    if name := ThreadSafeKey.is_valid(request.key):
+        user = asyncio.run_coroutine_threadsafe(set_user(), loop).result()
+        token = secrets.randbits(63)
+        asyncio.run_coroutine_threadsafe(
+            update_user(
+                user.id,
+                {User.tg_id: token, User.fullname: name, User.role: Role.WORKER},
+                False,
+            ),
+            loop,
+        ).result()
+        asyncio.run_coroutine_threadsafe(TimerSingleton().stop(name), loop)
+        return {"token": token}
     else:
         print("FALSE")
         raise HTTPException(status_code=401, detail="Неверный ключ")

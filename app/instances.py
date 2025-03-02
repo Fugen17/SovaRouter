@@ -14,21 +14,25 @@ logger = setup_logger(__name__)
 
 class ThreadSafeKey:
     _key = None
+    _name = None
     _lock = threading.Lock()
 
     @classmethod
-    def add(cls, key: int):
+    def add(cls, data: tuple):
         """Добавляет элемент в множество."""
         with cls._lock:
-            logger.debug(f"Set key = {key}")
-            cls._key = key
+            logger.debug(f"Set key = {data}")
+            cls._key = data[0]
+            cls._name = data[1]
 
     @classmethod
     def is_valid(cls, key: int):
         """Проверяет, содержится ли элемент в множестве."""
         with cls._lock:
             logger.debug(f"is_valid (our == your): {cls._key} == {key} ?")
-            return key == cls._key
+            if key == cls._key:
+                return cls._name
+            return None
 
     @classmethod
     def clear(cls):
@@ -76,7 +80,7 @@ class TimerSingleton:
         else:
             logger.debug("Не удалось найти сообщение для удаления.")
 
-    async def start(self, message: Message, key: int):
+    async def start(self, message: Message, data: tuple):
         """Запускает таймер и сохраняет ID сообщения"""
         async with self._lock:
             if self._task is not None and not self._task.done():
@@ -85,7 +89,7 @@ class TimerSingleton:
                     await self._task
                 except asyncio.CancelledError:
                     print("Предыдущий таймер был отменен.")
-            ThreadSafeKey.add(key)
+            ThreadSafeKey.add(data)
             self._event.clear()
             self._task = asyncio.create_task(self._start_timer())
             # Сохраняем ID сообщения и chat_id для дальнейшего удаления

@@ -75,7 +75,9 @@ async def update_user(id: int, values: dict, use_tg: bool = True) -> None:
         DBKeyError: Ошибка неверного ключа.
         DBBadDataError: Ошибка неверного формата данных.
     """
-    logger.debug(f"Обновление user (id={id}, use_tg={use_tg}) с values={values.values()}")
+    logger.debug(
+        f"Обновление user (id={id}, use_tg={use_tg}) с values={values.values()}"
+    )
     async with async_session() as session:
         condition = User.tg_id if use_tg else User.id
         user: User = await session.scalar(select(User).where(condition == id))
@@ -88,7 +90,7 @@ async def update_user(id: int, values: dict, use_tg: bool = True) -> None:
                 check_user = await session.scalar(
                     select(User).where(User.tg_id == values.get(User.tg_id))
                 )
-                if check_user.role == Role.USER:
+                if check_user and check_user.role == Role.USER:
                     check_user.tg_id = None
                     await session.flush()
 
@@ -154,15 +156,22 @@ async def delete_factory(id: int) -> None:
 async def get_factories(deleted: bool = False) -> Sequence[Object]:
     logger.debug(f"Получение factories (deleted={deleted})")
     async with async_session() as session:
-        factories = await session.scalars(select(Object).where(Object.is_deleted.is_(deleted)))
+        factories = await session.scalars(
+            select(Object).where(Object.is_deleted.is_(deleted))
+        )
         return factories.all()
 
 
-async def add_task(admin_id: int, user_id: int, object_id: int, description: str) -> WorkerTask:
+async def add_task(
+    admin_id: int, user_id: int, object_id: int, description: str
+) -> WorkerTask:
     logger.debug("add_task to db")
     async with async_session() as session:
         task = WorkerTask(
-            admin_id=admin_id, user_id=user_id, object_id=object_id, description=description
+            admin_id=admin_id,
+            user_id=user_id,
+            object_id=object_id,
+            description=description,
         )
         session.add(task)
         try:
@@ -175,7 +184,9 @@ async def add_task(admin_id: int, user_id: int, object_id: int, description: str
 async def update_task(task_id: int, status: TaskStatus, note: str = "") -> WorkerTask:
     logger.debug("update_task to db")
     async with async_session() as session:
-        task: WorkerTask = await session.scalar(select(WorkerTask).where(WorkerTask.id == task_id))
+        task: WorkerTask = await session.scalar(
+            select(WorkerTask).where(WorkerTask.id == task_id)
+        )
 
         if not task:
             raise BadKeyError()
@@ -189,7 +200,9 @@ async def update_task(task_id: int, status: TaskStatus, note: str = "") -> Worke
 async def get_task(task_id: int) -> WorkerTask:
     logger.debug("get_task to db")
     async with async_session() as session:
-        task: WorkerTask = await session.scalar(select(WorkerTask).where(WorkerTask.id == task_id))
+        task: WorkerTask = await session.scalar(
+            select(WorkerTask).where(WorkerTask.id == task_id)
+        )
 
         if not task:
             raise BadKeyError()

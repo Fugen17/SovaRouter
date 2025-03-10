@@ -13,7 +13,6 @@ services:
       - dev.dozzle.name=database
 
   bot:
-    image: sovarouter_bot:latest
     build:
       context: .
     env_file:

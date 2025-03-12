@@ -19,6 +19,8 @@ services:
       - ~/config/.env
     volumes:
       - ~/logs:/app/logs
+    ports:
+      - 10417:8001
     restart: unless-stopped
     depends_on:
       - db

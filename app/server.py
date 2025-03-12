@@ -91,9 +91,14 @@ async def authenticate(request: AuthRequest):
         raise HTTPException(status_code=401, detail="Token is invalid")
 
 
-@server.get("/get_current_tasks")
+@server.post("/get_current_tasks")
 async def get_current_tasks(request: GetTasks):
-    user = asyncio.run_coroutine_threadsafe(get_user(request.token), loop).result()
+    try:
+        user = asyncio.run_coroutine_threadsafe(get_user(request.token), loop).result()
+    except Exception:
+        raise HTTPException(
+            status_code=401, detail="Token has expired, please log in again"
+        )
     if user.role != Role.WORKER:
         raise HTTPException(
             status_code=401, detail="Token has expired, please log in again"
